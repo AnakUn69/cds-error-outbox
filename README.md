@@ -1,19 +1,39 @@
-# cds-error-outbox
+<div align="center">
 
-A production-ready, reusable **SAP CAP** (Node.js) plugin that automatically captures service errors, deduplicates them, and sends batched HTML email notifications — with **zero production dependencies**.
+# CDS Error Outbox
+
+**Automatic error capture, deduplication & email alerting for SAP CAP applications.**
+
+<br>
+
+[![npm](https://img.shields.io/npm/v/cds-error-outbox?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/cds-error-outbox)
+[![SAP CAP](https://img.shields.io/badge/SAP%20CAP-plugin-009FDB?style=for-the-badge&logo=sap&logoColor=white)](https://cap.cloud.sap)
+[![MIT](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](./LICENSE)
+[![zero deps](https://img.shields.io/badge/deps-zero-6366f1?style=for-the-badge&logo=nodedotjs&logoColor=white)](#)
+
+[![Microsoft O365](https://img.shields.io/badge/Microsoft%20365-mail%20ready-0078D4?style=flat-square&logo=microsoft&logoColor=white)](#o365--microsoft-graph-api)
+[![SMTP](https://img.shields.io/badge/SMTP-nodemailer-EA4335?style=flat-square&logo=gmail&logoColor=white)](#smtp)
+[![SQLite](https://img.shields.io/badge/SQLite-supported-003B57?style=flat-square&logo=sqlite&logoColor=white)](#db-entity)
+[![SAP HANA](https://img.shields.io/badge/SAP%20HANA-supported-1B6B3A?style=flat-square&logo=sap&logoColor=white)](#db-entity)
+[![SAP BTP](https://img.shields.io/badge/SAP%20BTP-Cloud%20Foundry-0FAAFF?style=flat-square&logo=sap&logoColor=white)](#environment-variables)
+
+</div>
+
+---
+
+**[Installation](#installation) · [Configuration](#configuration) · [Email Providers](#email-providers) · [How it works](#how-it-works) · [DB Entity](#db-entity) · [Environment variables](#environment-variables) · [Project structure](#project-structure)**
 
 ---
 
 ## Features
 
-- Hooks into **all CAP services** via `srv.on('error')` — zero manual wiring required
-- Stores errors in a CDS-managed `error.outbox.Errors` DB entity (auto-deployed)
-- **Deduplicates** by `SHA-256(message + service + action)` — increments count instead of creating duplicate rows
+- Hooks into **all CAP services** automatically — zero manual wiring required
+- Persists errors to a CDS-managed `error.outbox.Errors` entity
+- **Deduplicates** via `SHA-256(message + service + action)` — increments a counter instead of flooding the DB
 - Sends **batched HTML email reports** on a configurable interval
-- Pluggable email providers: **O365 (Microsoft Graph API)**, **SMTP (nodemailer)**, **Mock (dev/test)**
-- Fully configurable via `cds.env.requires.errorOutbox`
-- **Non-blocking** — error capture is fire-and-forget; the request pipeline is never delayed
-- Never crashes the application — all internal failures are logged and swallowed
+- Pluggable providers: **O365 (Microsoft Graph)**, **SMTP (nodemailer)**, **Mock (dev/test)**
+- **Non-blocking** — fire-and-forget capture, the request pipeline is never delayed
+- **Resilient** — all internal failures are caught, logged, and swallowed; the app never crashes
 
 ---
 
@@ -25,12 +45,33 @@ npm install cds-error-outbox
 
 Because `package.json` declares `"cds": { "plugin": true }`, CAP automatically loads `index.js` at startup.
 
-> **Important:** Due to how CAP resolves symlinked local packages, you must explicitly require the plugin in your project's `srv/server.js` (or root `server.js`):
+> **Note:** Due to how CAP resolves symlinked local packages, you may need to explicitly require the plugin so it is loaded at startup.
 >
+> **Option A — with a custom `server.js`:**
 > ```js
-> require('cds-error-outbox');  // ← add as the very first line
+> require("cds-error-outbox"); // ← add as the very first line
 > // ... rest of your server.js
 > ```
+>
+> **Option B — without a custom `server.js`** (most common):
+> Add the require at the top of any service file, e.g. `srv/admin-service.js`:
+> ```js
+> require("cds-error-outbox"); // ← add at the top
+> // ... rest of your service
+> ```
+
+Then register the DB model in your project (e.g. in `db/schema.cds`):
+
+```cds
+using from 'cds-error-outbox/db/model';
+```
+
+And deploy:
+
+```bash
+cds deploy --to sqlite   # local development
+cds build                # production (BTP, HANA)
+```
 
 ---
 
@@ -66,24 +107,24 @@ Add the following to your project's `package.json` under `cds.requires`, or to `
 
 ### Configuration reference
 
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | boolean | `true` | Enable/disable the entire plugin |
-| `interval` | number (ms) | `300000` | Batch email job frequency |
-| `batchSize` | number | `50` | Max errors per email batch |
-| `dedup.enabled` | boolean | `true` | Enable hash-based deduplication |
-| `dedup.windowMinutes` | number | `10` | Rolling dedup window in minutes |
-| `mail.provider` | string | `'mock'` | `'o365'` \| `'smtp'` \| `'mock'` |
-| `mail.from` | string | `''` | Sender address |
-| `mail.to` | string | `''` | Recipient(s), comma-separated |
-| `mail.tenantId` | string | `''` | Azure AD tenant ID (O365 only) |
-| `mail.clientId` | string | `''` | Azure AD app client ID (O365 only) |
-| `mail.clientSecret` | string | `''` | Azure AD app client secret (O365 only) |
-| `mail.smtp.host` | string | `''` | SMTP host (SMTP only) |
-| `mail.smtp.port` | number | `587` | SMTP port (SMTP only) |
-| `mail.smtp.secure` | boolean | `false` | Use TLS (SMTP only) |
-| `mail.smtp.auth.user` | string | `''` | SMTP username (SMTP only) |
-| `mail.smtp.auth.pass` | string | `''` | SMTP password (SMTP only) |
+| Key                   | Type        | Default  | Description                            |
+| --------------------- | ----------- | -------- | -------------------------------------- |
+| `enabled`             | boolean     | `true`   | Enable/disable the entire plugin       |
+| `interval`            | number (ms) | `300000` | Batch email job frequency              |
+| `batchSize`           | number      | `50`     | Max errors per email batch             |
+| `dedup.enabled`       | boolean     | `true`   | Enable hash-based deduplication        |
+| `dedup.windowMinutes` | number      | `10`     | Rolling dedup window in minutes        |
+| `mail.provider`       | string      | `'mock'` | `'o365'` \| `'smtp'` \| `'mock'`       |
+| `mail.from`           | string      | `''`     | Sender address                         |
+| `mail.to`             | string      | `''`     | Recipient(s), comma-separated          |
+| `mail.tenantId`       | string      | `''`     | Azure AD tenant ID (O365 only)         |
+| `mail.clientId`       | string      | `''`     | Azure AD app client ID (O365 only)     |
+| `mail.clientSecret`   | string      | `''`     | Azure AD app client secret (O365 only) |
+| `mail.smtp.host`      | string      | `''`     | SMTP host (SMTP only)                  |
+| `mail.smtp.port`      | number      | `587`    | SMTP port (SMTP only)                  |
+| `mail.smtp.secure`    | boolean     | `false`  | Use TLS (SMTP only)                    |
+| `mail.smtp.auth.user` | string      | `''`     | SMTP username (SMTP only)              |
+| `mail.smtp.auth.pass` | string      | `''`     | SMTP password (SMTP only)              |
 
 ---
 
@@ -163,7 +204,7 @@ npm install nodemailer
 CAP service throws an error
          │
          ▼
-  srv.on('error') — fire-and-forget via setImmediate (non-blocking)
+  srv.handle() wrapper — fire-and-forget via setImmediate (non-blocking)
          │
          ▼
   SHA-256( message | service | action )
@@ -216,19 +257,6 @@ entity Errors {
 }
 ```
 
-After installing the plugin, register the model in your project's `db/` folder. Create a file `db/error-outbox.cds`:
-
-```cds
-using from '../plugins/cds-error-outbox/db/model';
-```
-
-Then run deploy:
-
-```bash
-cds deploy --to sqlite   # local development
-cds build                # production (BTP, HANA)
-```
-
 ---
 
 ## Environment variables
@@ -261,7 +289,7 @@ cds-error-outbox/
 ├── lib/
 │   ├── bootstrap.js      ← Init orchestration (cds lifecycle hooks)
 │   ├── config.js         ← Deep merge + config loader (singleton)
-│   ├── interceptor.js    ← srv.on('error') hook (fire-and-forget)
+│   ├── interceptor.js    ← srv.handle() wrapper (fire-and-forget)
 │   ├── dedup.js          ← SHA-256 hash + DB upsert logic
 │   ├── scheduler.js      ← Interval batch job
 │   └── formatter.js      ← HTML email builder
