@@ -1,0 +1,34 @@
+{
+  "name": "cds-error-outbox",
+  "version": "1.0.0",
+  "description": "A reusable CAP plugin that captures service errors, deduplicates them, and sends batched email notifications.",
+  "main": "index.js",
+  "cds": {
+    "plugin": true,
+    "requires": {
+      "cds-error-outbox": {
+        "model": "cds-error-outbox"
+      }
+    }
+  },
+  "keywords": [
+    "sap-cap",
+    "cds",
+    "plugin",
+    "error",
+    "outbox",
+    "email"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "@sap/cds": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "nodemailer": {
+      "optional": true
+    }
+  }
+}
