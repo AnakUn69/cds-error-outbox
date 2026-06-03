@@ -60,11 +60,22 @@ async function send(mailConfig, subject, html) {
     .map((a) => a.trim())
     .join(', ');
 
+  const VALID_PRIORITY = ['low', 'normal', 'high'];
+  const rawPriority = mailConfig.importance ? String(mailConfig.importance).toLowerCase() : 'normal';
+  const priority = VALID_PRIORITY.includes(rawPriority) ? rawPriority : 'normal';
+  if (!VALID_PRIORITY.includes(rawPriority)) {
+    console.warn(
+      `[cds-error-outbox][smtp] Unknown importance value "${mailConfig.importance}" — falling back to "normal". ` +
+      'Accepted values: low | normal | high'
+    );
+  }
+
   await transporter.sendMail({
     from,
     to: toAddresses,
     subject,
-    html
+    html,
+    priority
   });
 }
 

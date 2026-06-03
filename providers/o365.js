@@ -108,9 +108,20 @@ async function send(mailConfig, subject, html) {
     .split(',')
     .map((addr) => ({ emailAddress: { address: addr.trim() } }));
 
+  const VALID_IMPORTANCE = ['low', 'normal', 'high'];
+  const rawImportance = mailConfig.importance ? String(mailConfig.importance).toLowerCase() : 'normal';
+  const importance = VALID_IMPORTANCE.includes(rawImportance) ? rawImportance : 'normal';
+  if (!VALID_IMPORTANCE.includes(rawImportance)) {
+    console.warn(
+      `[cds-error-outbox][o365] Unknown importance value "${mailConfig.importance}" — falling back to "normal". ` +
+      'Accepted values: low | normal | high'
+    );
+  }
+
   const payload = JSON.stringify({
     message: {
       subject,
+      importance,
       body: {
         contentType: 'HTML',
         content: html

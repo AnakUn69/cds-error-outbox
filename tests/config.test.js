@@ -65,6 +65,10 @@ describe('loadConfig / resetConfig', () => {
     assert.equal(config.dedup.enabled, true);
     assert.equal(config.dedup.windowMinutes, 10);
     assert.equal(config.mail.provider, 'mock');
+    assert.equal(config.mail.importance, 'normal');
+    assert.ok(config.mail.subject.includes('{count}'), 'default subject template should contain {count}');
+    assert.ok(config.mail.subject.includes('{errors}'), 'default subject template should contain {errors}');
+    assert.ok(config.mail.subject.includes('{timestamp}'), 'default subject template should contain {timestamp}');
   });
 
   it('overrides defaults with user config', () => {

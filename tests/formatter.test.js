@@ -3,7 +3,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { escapeHtml, formatHtmlEmail } = require('../lib/formatter');
+const { escapeHtml, formatHtmlEmail, resolveSubject } = require('../lib/formatter');
 
 // ── escapeHtml ───────────────────────────────────────────────────────────────
 
@@ -86,5 +86,62 @@ describe('formatHtmlEmail', () => {
   it('handles missing optional fields gracefully', () => {
     const minimal = { ID: 'x', service: 'S', action: 'A', message: 'oops', count: 1 };
     assert.doesNotThrow(() => formatHtmlEmail([minimal]));
+  });
+
+  it('uses provided subjectTemplate with {count} placeholder', () => {
+    const errors = [makeError({ count: 7 })];
+    const { subject } = formatHtmlEmail(errors, { subjectTemplate: 'Errors: {count}' });
+    assert.equal(subject, 'Errors: 7');
+  });
+
+  it('uses provided subjectTemplate with {errors} placeholder', () => {
+    const errors = [makeError({ ID: '1' }), makeError({ ID: '2' })];
+    const { subject } = formatHtmlEmail(errors, { subjectTemplate: '{errors} distinct' });
+    assert.equal(subject, '2 distinct');
+  });
+
+  it('uses provided subjectTemplate with {timestamp} placeholder', () => {
+    const { subject } = formatHtmlEmail([makeError()], { subjectTemplate: 'Report {timestamp}' });
+    assert.match(subject, /^Report \d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('unknown placeholders are left unchanged', () => {
+    const { subject } = formatHtmlEmail([makeError()], { subjectTemplate: 'Hello {service}' });
+    assert.equal(subject, 'Hello {service}');
+  });
+
+  it('falls back to built-in default when no subjectTemplate is provided', () => {
+    const errors = [makeError({ count: 3 })];
+    const { subject } = formatHtmlEmail(errors);
+    assert.match(subject, /\[CAP Error Outbox\]/);
+  });
+});
+
+// ── resolveSubject ─────────────────────────────────────────────────────────────────────────────
+
+describe('resolveSubject', () => {
+  it('replaces {count}', () => {
+    assert.equal(resolveSubject('{count} errors', { count: 5, errors: 2, timestamp: 'T' }), '5 errors');
+  });
+
+  it('replaces {errors}', () => {
+    assert.equal(resolveSubject('{errors} distinct', { count: 5, errors: 2, timestamp: 'T' }), '2 distinct');
+  });
+
+  it('replaces {timestamp}', () => {
+    assert.equal(resolveSubject('at {timestamp}', { count: 5, errors: 2, timestamp: '2026-01-01T00:00:00.000Z' }), 'at 2026-01-01T00:00:00.000Z');
+  });
+
+  it('replaces all placeholders at once', () => {
+    const result = resolveSubject('[{count}] {errors} errs @ {timestamp}', { count: 3, errors: 2, timestamp: 'NOW' });
+    assert.equal(result, '[3] 2 errs @ NOW');
+  });
+
+  it('replaces multiple occurrences of the same placeholder', () => {
+    assert.equal(resolveSubject('{count} / {count}', { count: 4, errors: 1, timestamp: 'T' }), '4 / 4');
+  });
+
+  it('leaves unknown placeholders unchanged', () => {
+    assert.equal(resolveSubject('Hello {service}', { count: 1, errors: 1, timestamp: 'T' }), 'Hello {service}');
   });
 });

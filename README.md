@@ -114,9 +114,11 @@ Add the following to your project's `package.json` under `cds.requires`, or to `
 | `batchSize`           | number      | `50`     | Max errors per email batch             |
 | `dedup.enabled`       | boolean     | `true`   | Enable hash-based deduplication        |
 | `dedup.windowMinutes` | number      | `10`     | Rolling dedup window in minutes        |
-| `mail.provider`       | string      | `'mock'` | `'o365'` \| `'smtp'` \| `'mock'`       |
-| `mail.from`           | string      | `''`     | Sender address                         |
-| `mail.to`             | string      | `''`     | Recipient(s), comma-separated          |
+| `mail.provider`       | string      | `'mock'`    | `'o365'` \| `'smtp'` \| `'mock'`                              |
+| `mail.from`           | string      | `''`        | Sender address                                                 |
+| `mail.to`             | string      | `''`        | Recipient(s), comma-separated                                  |
+| `mail.subject`        | string      | `'[CAP Error Outbox] {count} occurrence(s) in {errors} error(s) — {timestamp}'` | Email subject template. Placeholders: `{count}`, `{errors}`, `{timestamp}` |
+| `mail.importance`     | string      | `'normal'`  | Email priority: `'low'` \| `'normal'` \| `'high'`             |
 | `mail.tenantId`       | string      | `''`     | Azure AD tenant ID (O365 only)         |
 | `mail.clientId`       | string      | `''`     | Azure AD app client ID (O365 only)     |
 | `mail.clientSecret`   | string      | `''`     | Azure AD app client secret (O365 only) |
