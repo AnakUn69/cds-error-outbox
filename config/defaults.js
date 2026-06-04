@@ -17,6 +17,20 @@ module.exports = {
     windowMinutes: 10
   },
 
+  retention: {
+    /**
+     * Automatically delete sent error records older than this many days.
+     * Set to 0 to disable automatic cleanup.
+     */
+    days: 30
+  },
+
+  /**
+   * Whether to serve the built-in Fiori admin UI at /error-outbox-admin/.
+   * Set to false to disable the static route entirely.
+   */
+  adminUi: true,
+
   mail: {
     /** Email provider: 'o365' | 'smtp' | 'mock' */
     provider: 'mock',

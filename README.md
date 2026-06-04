@@ -21,7 +21,7 @@
 
 ---
 
-**[Installation](#installation) · [Configuration](#configuration) · [Email Providers](#email-providers) · [How it works](#how-it-works) · [DB Entity](#db-entity) · [Environment variables](#environment-variables) · [Project structure](#project-structure)**
+**[Installation](#installation) · [Configuration](#configuration) · [Admin UI](#admin-ui) · [Email Providers](#email-providers) · [How it works](#how-it-works) · [DB Entity](#db-entity) · [Environment variables](#environment-variables) · [Project structure](#project-structure)**
 
 ---
 
@@ -72,6 +72,31 @@ And deploy:
 cds deploy --to sqlite   # local development
 cds build                # production (BTP, HANA)
 ```
+
+### Expose the Admin Service
+
+To enable the OData admin API (required for the Admin UI), expose the built-in service in your project. Add it to any `.cds` file — for example `srv/services.cds` or directly in `db/schema.cds`:
+
+```cds
+using from 'cds-error-outbox';
+```
+
+This mounts `ErrorOutboxAdminService` at `/odata/v4/error-outbox/` and exposes the `Errors` entity for querying, filtering, acknowledging, and purging.
+
+> **Roles:** The service requires the `error-outbox-admin` role. In development with CAP mock auth (`cds.auth.strategy: 'dummy'`), any user (e.g. `alice`) has access automatically.
+>
+> In production, assign the role to users via your `xs-security.json`:
+>
+> ```json
+> {
+>   "scopes": [
+>     { "name": "$XSAPPNAME.error-outbox-admin", "description": "Access Error Outbox admin UI" }
+>   ],
+>   "role-templates": [
+>     { "name": "error-outbox-admin", "scope-references": ["$XSAPPNAME.error-outbox-admin"] }
+>   ]
+> }
+> ```
 
 ---
 
@@ -127,6 +152,72 @@ Add the following to your project's `package.json` under `cds.requires`, or to `
 | `mail.smtp.secure`    | boolean     | `false`  | Use TLS (SMTP only)                    |
 | `mail.smtp.auth.user` | string      | `''`     | SMTP username (SMTP only)              |
 | `mail.smtp.auth.pass` | string      | `''`     | SMTP password (SMTP only)              |
+
+---
+
+## Admin UI
+
+The plugin ships a built-in **SAPUI5 admin application** served automatically at:
+
+```
+http://localhost:4004/error-outbox-admin/index.html
+```
+
+No additional setup is required — the UI is registered as a static Express route when the plugin loads. To disable it, set `adminUi: false` in your config:
+
+```json
+{
+  "cds": {
+    "requires": {
+      "errorOutbox": {
+        "adminUi": false
+      }
+    }
+  }
+}
+```
+
+### Features
+
+| Feature | Description |
+|---|---|
+| **Overview panel** | KPI cards (total / pending / acknowledged), sent ratio bar, top services by occurrence count |
+| **Collapsible rows** | Click any row to expand inline details — metadata, hash, stack trace, and action buttons |
+| **Inline actions** | Acknowledge or delete individual errors directly from the list |
+| **Bulk actions** | Select multiple rows via checkboxes → Acknowledge / Delete |
+| **Purge Sent** | One-click deletion of all acknowledged errors |
+| **Filters** | Free-text search (service, action, message) + status filter (All / Pending / Sent) |
+| **Detail page** | Full-page view per error — navigate via "Open Detail" button or direct URL |
+
+### Required setup
+
+The Admin UI consumes the `ErrorOutboxAdminService` OData API. You must expose it in your project as described in [Expose the Admin Service](#expose-the-admin-service) above.
+
+Your `package.json` should also include:
+
+```json
+{
+  "cds": {
+    "requires": {
+      "errorOutbox": {
+        "enabled": true
+      }
+    }
+  }
+}
+```
+
+### Authentication
+
+In **development** (CAP mock auth), navigate to:
+
+```
+http://localhost:4004/error-outbox-admin/index.html
+```
+
+You will be prompted for a username — enter `alice` (or any user defined in your `.cdsrc.json` / `package.json` users list). No password is required with `dummy` auth.
+
+In **production**, the UI respects the same auth strategy as the rest of your CAP application. The service is protected by the `error-outbox-admin` role.
 
 ---
 
@@ -283,7 +374,7 @@ CDS_REQUIRES_ERROROUTBOX_MAIL_TO=devops@yourcompany.com
 ```
 cds-error-outbox/
 ├── package.json          ← CAP plugin declaration (cds.plugin: true)
-├── index.js              ← Entry point — calls bootstrap.initialize()
+├── index.js              ← Entry point — calls bootstrap.initialize(), registers admin UI
 │
 ├── config/
 │   └── defaults.js       ← Default config values
@@ -301,6 +392,27 @@ cds-error-outbox/
 │   ├── o365.js           ← Microsoft Graph API (zero extra deps)
 │   ├── smtp.js           ← nodemailer wrapper (optional peer dep)
 │   └── mock.js           ← Console logger (dev/test)
+│
+├── srv/
+│   ├── admin-service.cds ← ErrorOutboxAdminService definition (@path: 'error-outbox')
+│   └── admin-service.js  ← acknowledge() and purgeSent() action handlers
+│
+├── app/
+│   └── error-outbox-admin/
+│       └── webapp/       ← SAPUI5 admin application (served at /error-outbox-admin/)
+│           ├── index.html
+│           ├── manifest.json
+│           ├── Component.js
+│           ├── controller/
+│           │   ├── List.controller.js   ← list page with collapsible rows + stats
+│           │   └── Detail.controller.js ← detail page
+│           ├── view/
+│           │   ├── List.view.xml
+│           │   └── Detail.view.xml
+│           ├── model/
+│           │   └── Formatter.js         ← UI formatters (date, status, state)
+│           └── css/
+│               └── style.css
 │
 └── db/
     └── model.cds         ← error.outbox.Errors entity

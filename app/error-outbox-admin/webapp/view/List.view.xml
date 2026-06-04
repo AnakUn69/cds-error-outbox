@@ -1,0 +1,267 @@
+<mvc:View
+  controllerName="error.outbox.admin.controller.List"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core"
+  xmlns:l="sap.ui.layout"
+  displayBlock="true">
+
+  <Page enableScrolling="true" class="sapUiNoContentPadding">
+
+    <customHeader>
+      <OverflowToolbar style="Clear" height="3rem">
+        <core:Icon src="sap-icon://alert" size="1.25rem" color="Negative" class="sapUiSmallMarginEnd" />
+        <Title text="Error Outbox" level="H3" />
+        <ToolbarSpacer />
+        <SearchField
+          id="searchField"
+          width="16rem"
+          placeholder="Filter by service or message…"
+          liveChange="onSearch"
+          search="onSearch" />
+        <SegmentedButton id="statusFilter" selectedKey="all" selectionChange="onStatusFilter">
+          <items>
+            <SegmentedButtonItem key="all"     text="All"     />
+            <SegmentedButtonItem key="pending" text="Pending" />
+            <SegmentedButtonItem key="sent"    text="Sent"    />
+          </items>
+        </SegmentedButton>
+        <ToolbarSeparator />
+        <Button id="btnAcknowledge" text="Acknowledge" icon="sap-icon://accept"  type="Emphasized" enabled="false" press="onAcknowledge" />
+        <Button id="btnDelete"      text="Delete"      icon="sap-icon://delete"  type="Reject"   enabled="false" press="onDelete" />
+        <Button                     text="Purge Sent"  icon="sap-icon://clear-all"                press="onPurgeSent" />
+        <Button                     icon="sap-icon://refresh" tooltip="Refresh"                   press="onRefresh" />
+      </OverflowToolbar>
+    </customHeader>
+
+    <content>
+      <MessageStrip id="msgStrip" visible="false" showIcon="true" showCloseButton="true" class="sapUiSmallMargin" />
+
+      <!-- ── Stats ──────────────────────────────────────────── -->
+      <Panel expandable="true" expanded="true" headerText="Overview" class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <content>
+          <FlexBox wrap="Wrap" alignItems="Stretch" class="eoStatRow">
+
+            <!-- KPI: Total -->
+            <VBox class="eoStatCard eoStatCardNeutral">
+              <Label text="TOTAL ERRORS" class="eoStatLabel" />
+              <Text text="{stats>/total}" class="eoStatValue" />
+              <Label text="all records" class="eoStatSub" />
+            </VBox>
+
+            <!-- KPI: Pending -->
+            <VBox class="eoStatCard eoStatCardWarning">
+              <Label text="PENDING" class="eoStatLabel" />
+              <Text text="{stats>/pending}" class="eoStatValue eoStatValueWarning" />
+              <Label text="not yet sent" class="eoStatSub" />
+            </VBox>
+
+            <!-- KPI: Sent -->
+            <VBox class="eoStatCard eoStatCardSuccess">
+              <Label text="ACKNOWLEDGED" class="eoStatLabel" />
+              <Text text="{stats>/sent}" class="eoStatValue eoStatValueSuccess" />
+              <Label text="sent to recipient" class="eoStatSub" />
+            </VBox>
+
+            <!-- Divider -->
+            <core:HTML content="&lt;div class='eoStatDivider'&gt;&lt;/div&gt;" />
+
+            <!-- Ratio bar -->
+            <VBox class="eoStatSection">
+              <Label text="SENT RATIO" class="eoStatLabel sapUiTinyMarginBottom" />
+              <ProgressIndicator
+                percentValue="{stats>/sentPct}"
+                displayValue="{stats>/sentPctLabel}"
+                state="Success"
+                height="1.75rem"
+                width="100%" />
+              <FlexBox justifyContent="SpaceBetween" class="sapUiTinyMarginTop">
+                <FlexBox alignItems="Center">
+                  <core:HTML content="&lt;span class='eoDot eoDotSuccess'&gt;&lt;/span&gt;" />
+                  <Label text="Sent" class="sapUiTinyMarginBegin" />
+                </FlexBox>
+                <FlexBox alignItems="Center">
+                  <core:HTML content="&lt;span class='eoDot eoDotWarning'&gt;&lt;/span&gt;" />
+                  <Label text="Pending" class="sapUiTinyMarginBegin" />
+                </FlexBox>
+              </FlexBox>
+            </VBox>
+
+            <!-- Top services -->
+            <VBox class="eoStatSection eoStatSectionWide">
+              <Label text="TOP SERVICES BY OCCURRENCES" class="eoStatLabel sapUiTinyMarginBottom" />
+              <List showSeparators="None" items="{stats>/barData}">
+                <CustomListItem>
+                  <VBox class="sapUiTinyMarginBottom">
+                    <FlexBox justifyContent="SpaceBetween" class="sapUiTinyMarginBottom">
+                      <Label text="{stats>service}" />
+                      <Label text="{stats>count}" design="Bold" />
+                    </FlexBox>
+                    <ProgressIndicator
+                      percentValue="{stats>stats_pct}"
+                      showValue="false"
+                      state="None"
+                      height="0.375rem"
+                      width="100%" />
+                  </VBox>
+                </CustomListItem>
+              </List>
+            </VBox>
+
+          </FlexBox>
+        </content>
+      </Panel>
+
+      <List
+        id="errorsList"
+        mode="MultiSelect"
+        selectionChange="onSelectionChange"
+        growing="true"
+        growingThreshold="25"
+        sticky="HeaderToolbar,InfoToolbar"
+        noDataText="No errors recorded"
+        class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop sapUiSmallMarginBottom"
+        items="{
+          path: '/Errors',
+          sorter: [{path: 'sent', descending: false}, {path: 'lastSeen', descending: true}],
+          parameters: { $count: true }
+        }">
+
+        <headerToolbar>
+          <OverflowToolbar>
+            <Title id="tableTitle" text="Errors" level="H4" />
+            <ToolbarSpacer />
+            <Text id="countText" text="" class="sapUiSmallMarginEnd" />
+          </OverflowToolbar>
+        </headerToolbar>
+
+        <infoToolbar>
+          <Toolbar active="false" style="Clear">
+            <FlexBox alignItems="Center" width="100%" class="eoListHeader">
+              <Text text="">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="2.75rem" /></layoutData>
+              </Text>
+              <Label text="Service / Action" class="eoListHeaderCell">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="14rem" /></layoutData>
+              </Label>
+              <Label text="Message" class="eoListHeaderCell">
+                <layoutData><FlexItemData growFactor="1" shrinkFactor="1" /></layoutData>
+              </Label>
+              <Label text="Count" class="eoListHeaderCell" textAlign="End">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="5.5rem" /></layoutData>
+              </Label>
+              <Label text="Last Seen" class="eoListHeaderCell">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="10rem" /></layoutData>
+              </Label>
+              <Label text="Status" class="eoListHeaderCell" textAlign="Center">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="8rem" /></layoutData>
+              </Label>
+              <Text text="">
+                <layoutData><FlexItemData shrinkFactor="0" baseSize="2.5rem" /></layoutData>
+              </Text>
+            </FlexBox>
+          </Toolbar>
+        </infoToolbar>
+
+        <items>
+          <CustomListItem
+            type="Active"
+            press="onItemPress"
+            highlight="{path: 'sent', targetType: 'any', formatter: '.formatter.rowHighlight'}">
+            <VBox>
+
+              <!-- ── Row ── -->
+              <FlexBox alignItems="Center" class="eoListRow">
+                <ObjectIdentifier title="{service}" text="{action}">
+                  <layoutData><FlexItemData shrinkFactor="0" baseSize="14rem" /></layoutData>
+                </ObjectIdentifier>
+                <Text text="{message}" maxLines="2" wrapping="true">
+                  <layoutData><FlexItemData growFactor="1" shrinkFactor="1" /></layoutData>
+                </Text>
+                <ObjectNumber
+                  number="{count}"
+                  state="{= ${count} > 10 ? 'Error' : (${count} > 3 ? 'Warning' : 'None')}">
+                  <layoutData><FlexItemData shrinkFactor="0" baseSize="5.5rem" /></layoutData>
+                </ObjectNumber>
+                <Text text="{path: 'lastSeen', targetType: 'any', formatter: '.formatter.formatDate'}">
+                  <layoutData><FlexItemData shrinkFactor="0" baseSize="10rem" /></layoutData>
+                </Text>
+                <ObjectStatus
+                  text="{path: 'sent', targetType: 'any', formatter: '.formatter.sentStatus'}"
+                  state="{path: 'sent', targetType: 'any', formatter: '.formatter.sentState'}"
+                  inverted="true">
+                  <layoutData><FlexItemData shrinkFactor="0" baseSize="8rem" /></layoutData>
+                </ObjectStatus>
+                <VBox justifyContent="Center" alignItems="Center" class="eoExpandIconWrapper">
+                  <layoutData><FlexItemData shrinkFactor="0" baseSize="2.5rem" /></layoutData>
+                  <core:Icon src="sap-icon://slim-arrow-right" class="eoExpandIcon" color="Tile" useIconTooltip="false" />
+                </VBox>
+              </FlexBox>
+
+              <!-- ── Inline Detail ── -->
+              <VBox class="eoListDetail" visible="false">
+                <MessageStrip
+                  text="{path: 'sent', targetType: 'any', formatter: '.formatter.sentMessage'}"
+                  type="{path: 'sent', targetType: 'any', formatter: '.formatter.sentState'}"
+                  showIcon="true"
+                  showCloseButton="false"
+                  class="sapUiSmallMargin" />
+                <FlexBox wrap="Wrap" class="eoMetaGrid">
+                  <VBox class="eoMetaCell">
+                    <Label text="FIRST SEEN" class="eoMetaLabel" />
+                    <Text text="{path: 'firstSeen', targetType: 'any', formatter: '.formatter.formatDate'}" class="eoMetaValue" />
+                  </VBox>
+                  <VBox class="eoMetaCell">
+                    <Label text="LAST SEEN" class="eoMetaLabel" />
+                    <Text text="{path: 'lastSeen', targetType: 'any', formatter: '.formatter.formatDate'}" class="eoMetaValue" />
+                  </VBox>
+                  <VBox class="eoMetaCell">
+                    <Label text="OCCURRENCES" class="eoMetaLabel" />
+                    <Text text="{count}" class="eoMetaValue" />
+                  </VBox>
+                </FlexBox>
+                <VBox class="eoHashRow">
+                  <Label text="HASH" class="eoMetaLabel" />
+                  <Text text="{hash}" class="eoMetaValue eoMetaValueMono" />
+                </VBox>
+                <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+                  <Label text="STACK TRACE" class="eoMetaLabel sapUiTinyMarginBottom" />
+                  <TextArea
+                    value="{stack}"
+                    editable="false"
+                    growing="true"
+                    rows="8"
+                    width="100%"
+                    class="errorOutboxStack" />
+                </VBox>
+                <FlexBox wrap="Wrap" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+                  <Button
+                    text="Acknowledge"
+                    icon="sap-icon://accept"
+                    type="Emphasized"
+                    press="onAcknowledgeSingle"
+                    visible="{path: 'sent', targetType: 'any', formatter: '.formatter.notSent'}"
+                    class="sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+                  <Button
+                    text="Delete"
+                    icon="sap-icon://delete"
+                    type="Reject"
+                    press="onDeleteSingle"
+                    class="sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+                  <Button
+                    text="Open Detail"
+                    icon="sap-icon://detail-view"
+                    press="onOpenDetail"
+                    class="sapUiSmallMarginBottom" />
+                </FlexBox>
+              </VBox>
+
+            </VBox>
+          </CustomListItem>
+        </items>
+
+      </List>
+    </content>
+
+  </Page>
+</mvc:View>

@@ -1,0 +1,112 @@
+<mvc:View
+  controllerName="error.outbox.admin.controller.Detail"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:layout="sap.ui.layout"
+  xmlns:form="sap.ui.layout.form"
+  xmlns:core="sap.ui.core"
+  displayBlock="true">
+
+  <Page
+    title="Error Detail"
+    showNavButton="true"
+    navButtonPress="onNavBack"
+    enableScrolling="true">
+
+    <headerContent>
+      <Button
+        text="Acknowledge"
+        icon="sap-icon://accept"
+        type="Emphasized"
+        visible="{path: 'sent', targetType: 'any', formatter: '.formatter.notSent'}"
+        press="onAcknowledge" />
+      <Button
+        icon="sap-icon://delete"
+        type="Reject"
+        tooltip="Delete this error"
+        press="onDelete" />
+    </headerContent>
+
+    <content>
+
+      <!-- Status banner -->
+      <MessageStrip
+        text="{path: 'sent', targetType: 'any', formatter: '.formatter.sentMessage'}"
+        type="{path: 'sent', targetType: 'any', formatter: '.formatter.sentState'}"
+        showIcon="true"
+        showCloseButton="false"
+        class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop sapUiTinyMarginBottom" />
+
+      <!-- ── Header identity row ─────────────────────────────── -->
+      <VBox class="eoDetailHeader sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+        <FlexBox wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween">
+          <VBox>
+            <FlexBox alignItems="Center">
+              <core:Icon src="sap-icon://error" size="1.25rem" color="Negative" class="sapUiTinyMarginEnd" />
+              <Title text="{service}" level="H4" />
+              <core:HTML content="&lt;span class='eoDetailActionChip'&gt;" />
+              <Text text="{action}" class="eoDetailActionText" />
+              <core:HTML content="&lt;/span&gt;" />
+            </FlexBox>
+            <Text text="{message}" wrapping="true" class="eoDetailMessage sapUiSmallMarginTop" />
+          </VBox>
+          <VBox class="eoDetailCountBadge" justifyContent="Center" alignItems="Center">
+            <Text text="{count}" class="eoDetailCountValue" />
+            <Label text="occurrences" class="eoDetailCountLabel" />
+          </VBox>
+        </FlexBox>
+      </VBox>
+
+      <!-- ── Metadata grid ──────────────────────────────────── -->
+      <Panel expandable="false" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom eoDetailPanel">
+        <content>
+          <FlexBox wrap="Wrap" class="eoMetaGrid">
+
+            <VBox class="eoMetaCell">
+              <Label text="FIRST SEEN" class="eoMetaLabel" />
+              <Text text="{path: 'firstSeen', targetType: 'any', formatter: '.formatter.formatDate'}" class="eoMetaValue" />
+            </VBox>
+
+            <VBox class="eoMetaCell">
+              <Label text="LAST SEEN" class="eoMetaLabel" />
+              <Text text="{path: 'lastSeen', targetType: 'any', formatter: '.formatter.formatDate'}" class="eoMetaValue" />
+            </VBox>
+
+            <VBox class="eoMetaCell">
+              <Label text="SERVICE" class="eoMetaLabel" />
+              <Text text="{service}" class="eoMetaValue" />
+            </VBox>
+
+            <VBox class="eoMetaCell">
+              <Label text="ACTION" class="eoMetaLabel" />
+              <Text text="{action}" class="eoMetaValue" />
+            </VBox>
+
+            <VBox class="eoMetaCell eoMetaCellWide">
+              <Label text="DEDUP HASH" class="eoMetaLabel" />
+              <Text text="{hash}" class="eoMetaValueMono" />
+            </VBox>
+
+          </FlexBox>
+        </content>
+      </Panel>
+
+      <!-- ── Stack trace ────────────────────────────────────── -->
+      <Panel headerText="Stack Trace" expandable="true" expanded="true"
+        class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom eoDetailPanel">
+        <content>
+          <TextArea
+            value="{stack}"
+            editable="false"
+            growing="true"
+            growingMaxLines="40"
+            rows="14"
+            width="100%"
+            class="errorOutboxStack" />
+        </content>
+      </Panel>
+
+    </content>
+
+  </Page>
+</mvc:View>

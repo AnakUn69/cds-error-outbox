@@ -1,0 +1,93 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "error.outbox.admin",
+    "type": "application",
+    "title": "Error Outbox Admin",
+    "description": "Administrative UI for the cds-error-outbox plugin.",
+    "applicationVersion": { "version": "1.0.0" },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/error-outbox/",
+        "type": "OData",
+        "settings": { "odataVersion": "4.0" }
+      }
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.120",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.layout": {},
+        "sap.ui.core": {}
+      }
+    },
+    "resources": {
+      "css": [{ "uri": "css/style.css" }]
+    },
+    "rootView": {
+      "viewName": "error.outbox.admin.view.App",
+      "type": "XML",
+      "async": true,
+      "id": "appView"
+    },
+    "models": {
+      "": {
+        "dataSource": "mainService",
+        "settings": {
+          "synchronizationMode": "None",
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "uri": "i18n/i18n.properties"
+      }
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "viewType": "XML",
+        "viewPath": "error.outbox.admin.view",
+        "controlId": "app",
+        "controlAggregation": "pages",
+        "async": true
+      },
+      "routes": [
+        {
+          "pattern": "",
+          "name": "list",
+          "target": "list"
+        },
+        {
+          "pattern": "Errors/{id}",
+          "name": "detail",
+          "target": "detail"
+        }
+      ],
+      "targets": {
+        "list": {
+          "viewName": "List",
+          "viewLevel": 1
+        },
+        "detail": {
+          "viewName": "Detail",
+          "viewLevel": 2
+        }
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "fullWidth": true
+  }
+}
+
+ 
