@@ -1,6 +1,6 @@
 {
   "name": "cds-error-outbox",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A reusable CAP plugin that captures service errors, deduplicates them, and sends batched email notifications.",
   "main": "index.js",
   "cds": {
